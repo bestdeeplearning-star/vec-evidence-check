@@ -1,0 +1,1 @@
+SYNTHETIC FIXTURE ONLY. Example prompt to illustrate packaging; no model was run.

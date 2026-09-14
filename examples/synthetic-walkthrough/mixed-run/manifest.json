@@ -1,0 +1,42 @@
+{
+  "schema_version": 1,
+  "tool_version": "1.0.0",
+  "created_at": "2026-09-14T01:46:55.574987+00:00",
+  "rules_as_of": "2026-09-14",
+  "run": {
+    "id": "synthetic-example-A",
+    "track": "agent",
+    "framework": "synthetic-fixture-no-real-agent",
+    "model": "no-model-was-run"
+  },
+  "artifacts": [
+    {
+      "kind": "prediction",
+      "path": "prediction.h5ad",
+      "run_id": "synthetic-example-A",
+      "size_bytes": 22144,
+      "sha256": "308f950b05af7c103ad417fe02ec48b6c28f62316041132420e6f5c81127f52a"
+    },
+    {
+      "kind": "trajectory",
+      "path": "trajectory.jsonl",
+      "run_id": "synthetic-example-A",
+      "size_bytes": 81,
+      "sha256": "d2785ce07b29c7a2ec12dcbb04947edebb40f167f500e892325e3f9b4098fcd7"
+    },
+    {
+      "kind": "prompts",
+      "path": "prompts.txt",
+      "run_id": "synthetic-example-B",
+      "size_bytes": 82,
+      "sha256": "3e6ab6ef8b354da7846b08ef545a04cbe2975a0f4f6366c1450a590cafc85d94"
+    },
+    {
+      "kind": "harness",
+      "path": "harness.py",
+      "run_id": "synthetic-example-A",
+      "size_bytes": 91,
+      "sha256": "367874cf98ba2e2b119268a5a5e824f844950bc517bb176d9bb2cc25e7760a4d"
+    }
+  ]
+}

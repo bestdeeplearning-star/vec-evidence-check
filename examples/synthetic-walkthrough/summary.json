@@ -1,0 +1,72 @@
+{
+  "synthetic_only": true,
+  "real_agent_run": false,
+  "scientific_scores_computed": false,
+  "official_submission": false,
+  "h5ad_roundtrip_shape": [
+    8,
+    5
+  ],
+  "cases": [
+    {
+      "case": "complete-final",
+      "expected": "pass",
+      "actual": "pass",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case": "unknown-team-storage",
+      "expected": "incomplete",
+      "actual": "incomplete",
+      "errors": [],
+      "warnings": [
+        "Team storage already used is unknown. Read it in the official portal; pass --already-used-bytes excluding this new bundle."
+      ]
+    },
+    {
+      "case": "prior-storage-exhausted",
+      "expected": "fail",
+      "actual": "fail",
+      "errors": [
+        "Declared prior storage plus this bundle exceeds the conservative team evidence limit"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "two-kinds-scoring",
+      "expected": "pass",
+      "actual": "pass",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case": "two-kinds-final",
+      "expected": "fail",
+      "actual": "fail",
+      "errors": [
+        "Final nomination missing: harness"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "wrong-run-label",
+      "expected": "fail",
+      "actual": "fail",
+      "errors": [
+        "Artifact run_id mismatch: prompts.txt"
+      ],
+      "warnings": []
+    },
+    {
+      "case": "same-size-replacement",
+      "expected": "fail",
+      "actual": "fail",
+      "errors": [
+        "prediction.h5ad: SHA-256 changed since sealing"
+      ],
+      "warnings": []
+    }
+  ],
+  "all_expected_outcomes_observed": true
+}

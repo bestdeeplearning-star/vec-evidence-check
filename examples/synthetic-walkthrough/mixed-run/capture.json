@@ -1,0 +1,30 @@
+{
+  "run": {
+    "id": "synthetic-example-A",
+    "track": "agent",
+    "framework": "synthetic-fixture-no-real-agent",
+    "model": "no-model-was-run"
+  },
+  "artifacts": [
+    {
+      "kind": "prediction",
+      "path": "prediction.h5ad",
+      "run_id": "synthetic-example-A"
+    },
+    {
+      "kind": "trajectory",
+      "path": "trajectory.jsonl",
+      "run_id": "synthetic-example-A"
+    },
+    {
+      "kind": "prompts",
+      "path": "prompts.txt",
+      "run_id": "synthetic-example-A"
+    },
+    {
+      "kind": "harness",
+      "path": "harness.py",
+      "run_id": "synthetic-example-A"
+    }
+  ]
+}
