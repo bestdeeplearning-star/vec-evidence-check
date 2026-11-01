@@ -2,7 +2,7 @@
 
 VEC Evidence Check is an independent packaging tool. It does not implement or replace an official scientific metric.
 
-The [official Rules, section 9](https://virtualembryo.ai/challenge/rules) describe the relationship between a submitted prediction and evidence of the run that produced it. This tool addresses the practical file-assembly step: explicit run labels, byte identity, completeness for a chosen phase and evidence storage estimates. Its policy snapshot is dated 14 September 2026.
+The [official Rules, section 9](https://virtualembryo.ai/challenge/rules) describe the relationship between a submitted prediction and evidence of the run that produced it. This tool addresses the practical file-assembly step: explicit run labels, byte identity, completeness for a chosen phase and evidence storage estimates. The 31 October 2026 update uses the per-submission evidence limits in section 9 and the [official evidence API guide](https://virtualembryo.ai/challenge/account/api-keys).
 
 ## What was already available
 

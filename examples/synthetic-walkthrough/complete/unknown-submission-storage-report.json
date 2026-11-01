@@ -1,12 +1,12 @@
 {
-  "tool_version": "1.0.0",
+  "tool_version": "1.1.0",
   "phase": "final",
-  "rules_as_of": "2026-09-14",
+  "rules_as_of": "2026-10-31",
   "rules_url": "https://virtualembryo.ai/challenge/rules",
-  "errors": [
-    "Declared prior storage plus this bundle exceeds the conservative team evidence limit"
+  "errors": [],
+  "warnings": [
+    "Specify --new-submission for a fresh entry, or --submission-used-bytes for evidence already attached to this submission outside the bundle."
   ],
-  "warnings": [],
   "files": [
     {
       "kind": "prediction",
@@ -43,8 +43,8 @@
   "manifest_is_official_upload_format": false,
   "note": "A pass means local packaging checks passed. It is not acceptance, scoring, eligibility or proof of autonomy.",
   "bundle_evidence_bytes": 254,
-  "team_already_used_bytes_declared": 600000000,
-  "team_total_bytes_estimate": 600000254,
-  "result": "fail",
-  "exit_code": 1
+  "submission_already_used_bytes_declared": null,
+  "submission_total_bytes_estimate": null,
+  "result": "incomplete",
+  "exit_code": 2
 }

@@ -12,7 +12,7 @@ import anndata as ad
 import h5py
 import numpy as np
 
-from vec_evidence import TEAM_LIMIT, audit, seal
+from vec_evidence import SUBMISSION_LIMIT, audit, seal
 
 
 def run(output):
@@ -41,15 +41,16 @@ def run(output):
     seal(base / "capture.json", base / "manifest.json")
     cases = []
 
-    def record(name, folder, phase, used, expected):
-        result = audit(folder / "manifest.json", phase, used)
+    def record(name, folder, phase, used, expected, legacy_team=None):
+        result = audit(folder / "manifest.json", phase, legacy_team, submission_used_bytes=used)
         assert result["result"] == expected, (name, result)
         (folder / (name + "-report.json")).write_text(json.dumps(result, indent=2) + "\n")
         cases.append({"case": name, "expected": expected, "actual": result["result"], "errors": result["errors"], "warnings": result["warnings"]})
 
     record("complete-final", base, "final", 0, "pass")
-    record("unknown-team-storage", base, "final", None, "incomplete")
-    record("prior-storage-exhausted", base, "final", TEAM_LIMIT, "fail")
+    record("other-submission-storage", base, "final", 0, "pass", legacy_team=600_000_000)
+    record("unknown-submission-storage", base, "final", None, "incomplete")
+    record("same-submission-exhausted", base, "final", SUBMISSION_LIMIT, "fail")
     partial = output / "scoring-only"
     shutil.copytree(base, partial, ignore=shutil.ignore_patterns("*-report.json"))
     doc = json.loads((partial / "manifest.json").read_text())

@@ -4,7 +4,7 @@ Catch a changed prediction, a mixed run, or a missing evidence file before manua
 
 The local scorer answers whether a prediction can be evaluated. This tool answers a separate question: **are these still the exact files selected for this run, and is the evidence package complete for the intended stage?**
 
-It records file sizes and SHA-256 digests, then rechecks the files without changing or uploading them. A same-sized replacement is detected. The scoring and final-nomination checks are different, and unknown team storage is reported as incomplete rather than assumed empty.
+It records file sizes and SHA-256 digests, then rechecks the files without changing or uploading them. A same-sized replacement is detected. The scoring and final-nomination checks are different, and evidence storage is checked for the selected submission.
 
 The checker runs on Python 3.10+ using the standard library. The educational `.h5ad` demonstration uses Python 3.11+ with AnnData, NumPy and h5py. Both were exercised on Python 3.14.7. No GPU, reference dataset, target labels, API key or account is needed.
 
@@ -12,13 +12,13 @@ The checker runs on Python 3.10+ using the standard library. The educational `.h
 
 ```bash
 python3 vec_evidence.py audit examples/synthetic-walkthrough/complete/manifest.json \
-  --phase final --already-used-bytes 0
+  --phase final --new-submission
 python3 -m unittest -v test_vec_evidence.py
 ```
 
 The first command reports a local packaging pass for deliberately invented fixtures. These small files do **not** meet a real competition board's data requirements and must not be submitted. No autonomous run is claimed for the toy logs.
 
-Rebuild the seven-case demonstration into a fresh directory:
+Rebuild the eight-case demonstration into a fresh directory:
 
 ```bash
 python3 -m venv .venv
@@ -62,10 +62,12 @@ python3 vec_evidence.py seal /path/to/run/capture.json --out /path/to/run/manife
 
 ```bash
 python3 vec_evidence.py audit /path/to/run/manifest.json \
-  --phase final --already-used-bytes 123456 --out /path/to/run/check-report.json
+  --phase final --new-submission --out /path/to/run/check-report.json
 ```
 
-Replace `123456` with the team's actual evidence storage already used, excluding this new bundle. If unknown, omit the option; the result remains incomplete. Never enter zero merely to obtain a pass. The tool cannot read the portal or independently verify that value.
+Use `--new-submission` when this prediction has no attached evidence. For an existing submission, use `--submission-used-bytes N`, where `N` is the number of bytes already attached to **this submission** outside the bundle. Count each stored or planned attachment once. For a bundle containing only new files, `N` is the submission's `used_bytes` in the [official API guide](https://virtualembryo.ai/challenge/account/api-keys). The checker only verifies evidence kinds present locally. If you include previously attached files for that check, exclude their already-counted bytes from `N`. Unknown usage yields `incomplete` when the bundle contains evidence.
+
+Older scripts may still pass `--already-used-bytes`. This team-wide figure is ignored and recorded as a migration notice. Supply one of the new options. The checker can audit the original 1.0 manifests using their stored hashes.
 
 5. Open the official submission page yourself and upload each actual file in the correct field. The local manifest is **not** an official submission format. Preserve the portal's acceptance and scoring receipts separately.
 
@@ -73,9 +75,9 @@ Replace `123456` with the team's actual evidence storage already used, excluding
 
 | Result | Exit | Meaning |
 |---|---:|---|
-| `pass` | 0 | Local packaging checks passed using the declared prior storage |
+| `pass` | 0 | Local packaging checks passed for the selected submission |
 | `fail` | 1 | At least one concrete file, metadata, phase or size check failed |
-| `incomplete` | 2 | No local failure found, but prior team evidence storage is unknown |
+| `incomplete` | 2 | No local failure found, but this submission’s prior evidence usage is unknown |
 | `error` | 3 | Input JSON, file access or command setup prevented the audit |
 
 A pass does not prove autonomy, authorship, truthfulness of a run label, scientific quality, data licensing, eligibility or organizer acceptance. Anyone able to rewrite both a file and its manifest could create a new matching pair. Digests detect accidental changes **relative to the preserved snapshot**; they are not a trusted timestamp, signature or adversarial provenance proof.
@@ -84,17 +86,17 @@ The checker does not parse or repair `.h5ad`, inspect scientific contents, execu
 
 ## Rules snapshot and limits
 
-This implementation follows the [official Rules](https://virtualembryo.ai/challenge/rules), checked on 14 September 2026: agent scoring needs trajectory plus another evidence kind; final nomination needs trajectory, prompts and harness. Framework/model must be stated. File caps are 200 MB evidence, 600 MB evidence per team, and 1200 MB prediction. Recheck the live rules before use.
+The [official Rules](https://virtualembryo.ai/challenge/rules) and [API guide](https://virtualembryo.ai/challenge/account/api-keys) were checked on 31 October 2026. Each evidence attachment may be at most 200 MiB (209,715,200 bytes). The evidence attached to one submission, including the new bundle, may total at most 2 GiB (2,147,483,648 bytes). Evidence attached to another submission, including P2 entries, does not count. The checker measures compressed files as stored. A prediction is checked separately and excluded from the evidence total. For predictions it retains the original conservative 1,200,000,000-byte limit (the rules use MB and the upload guide uses MiB).
 
-Because the site does not define MB in bytes, this checker uses conservative decimal limits: 200,000,000 / 600,000,000 / 1,200,000,000 bytes. It measures the actual file being uploaded, including compressed files as stored, and does not estimate uncompressed sizes. It counts all selected new evidence files plus the operator's prior-storage figure; it does not assume server deduplication.
+Agent scoring requires a trajectory and another evidence kind. Final nomination requires a trajectory, prompts and a harness. Declare the framework and model. Recheck the official pages for later changes.
 
 The [FAQ](https://virtualembryo.ai/challenge/faq) still described a lower scoring-evidence threshold when reviewed. The stricter explicit Rules govern this snapshot. No metric semantics or leaderboard scores are implemented here.
 
 ## What is included
 
 - `vec_evidence.py`: dependency-free CLI and importable checker
-- `test_vec_evidence.py`: 29 behavioral tests covering packaging mistakes and malformed input
-- `demo_synthetic.py`: executable seven-case experiment with invented `.h5ad` data
+- `test_vec_evidence.py`: behavioral tests covering packaging mistakes and malformed input
+- `demo_synthetic.py`: executable eight-case experiment with invented `.h5ad` data
 - `examples/synthetic-walkthrough/summary.json`: observed outcomes from a completed run
 - `TUTORIAL.es.md`: Spanish walkthrough
 - `SOURCES.md`: comparison with existing organizer materials and open work

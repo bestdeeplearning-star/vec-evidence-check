@@ -14,11 +14,11 @@ import sys
 from datetime import datetime, timezone
 from pathlib import Path, PurePosixPath
 
-VERSION = "1.0.0"
+VERSION = "1.1.0"
 RULES_URL = "https://virtualembryo.ai/challenge/rules"
-RULES_AS_OF = "2026-09-14"
-EVIDENCE_LIMIT = 200_000_000
-TEAM_LIMIT = 600_000_000
+RULES_AS_OF = "2026-10-31"
+EVIDENCE_LIMIT = 200 * 1024**2
+SUBMISSION_LIMIT = 2 * 1024**3
 PREDICTION_LIMIT = 1_200_000_000
 KINDS = {"prediction", "trajectory", "prompts", "harness", "other"}
 
@@ -79,7 +79,7 @@ def file_record(path, kind):
     if before.st_size <= 0:
         raise BundleError("Empty artifact")
     if before.st_size > limit:
-        raise BundleError(f"File exceeds conservative decimal-byte limit {limit}")
+        raise BundleError(f"File exceeds {kind} limit of {limit} bytes")
     digest = hashlib.sha256()
     with path.open("rb") as stream:
         opened = os.fstat(stream.fileno())
@@ -142,11 +142,13 @@ def seal(capture_path, output_path):
     return manifest
 
 
-def audit(manifest_path, phase="scoring", already_used_bytes=None):
+def audit(manifest_path, phase="scoring", already_used_bytes=None, *, submission_used_bytes=None):
     if phase not in ("scoring", "final"):
         raise BundleError("phase must be scoring or final")
     if already_used_bytes is not None and (type(already_used_bytes) is not int or already_used_bytes < 0):
         raise BundleError("already_used_bytes must be a non-negative integer")
+    if submission_used_bytes is not None and (type(submission_used_bytes) is not int or submission_used_bytes < 0):
+        raise BundleError("submission_used_bytes must be a non-negative integer")
     manifest_path = Path(manifest_path)
     errors, warnings, checks = [], [], []
     result = {"tool_version": VERSION, "phase": phase, "rules_as_of": RULES_AS_OF,
@@ -163,7 +165,9 @@ def audit(manifest_path, phase="scoring", already_used_bytes=None):
     except BundleError as exc:
         errors.append(str(exc))
         run = run if isinstance(run, dict) else {}
-    if manifest.get("rules_as_of") != RULES_AS_OF:
+    # Both released schema-1 manifests store the same run, paths, sizes and hashes.
+    # Apply the current policy to the original snapshot without re-sealing evidence.
+    if manifest.get("rules_as_of") not in ("2026-09-14", RULES_AS_OF):
         errors.append("Manifest policy snapshot differs from this tool; review rules before continuing")
     artifacts = manifest.get("artifacts")
     if not isinstance(artifacts, list) or not artifacts:
@@ -218,16 +222,23 @@ def audit(manifest_path, phase="scoring", already_used_bytes=None):
             if missing:
                 errors.append("Final nomination missing: " + ", ".join(sorted(missing)))
     result["bundle_evidence_bytes"] = evidence_bytes
-    result["team_already_used_bytes_declared"] = already_used_bytes
-    result["team_total_bytes_estimate"] = None
-    if evidence_bytes > TEAM_LIMIT:
-        errors.append("This bundle alone exceeds the conservative team evidence limit")
-    if evidence_bytes and already_used_bytes is None:
-        warnings.append("Team storage already used is unknown. Read it in the official portal; pass --already-used-bytes excluding this new bundle.")
-    elif already_used_bytes is not None:
-        result["team_total_bytes_estimate"] = evidence_bytes + already_used_bytes
-        if result["team_total_bytes_estimate"] > TEAM_LIMIT:
-            errors.append("Declared prior storage plus this bundle exceeds the conservative team evidence limit")
+    result["submission_already_used_bytes_declared"] = submission_used_bytes
+    result["submission_total_bytes_estimate"] = None
+    if already_used_bytes is not None:
+        result["legacy_option_notice"] = (
+            "--already-used-bytes described team-wide storage and is ignored. "
+            "Use --new-submission or --submission-used-bytes for this submission alone."
+        )
+    if submission_used_bytes is None:
+        if evidence_bytes > SUBMISSION_LIMIT:
+            errors.append("This bundle alone exceeds the 2 GiB submission evidence limit")
+        elif evidence_bytes:
+            warnings.append("Specify --new-submission for a fresh entry, or --submission-used-bytes "
+                            "for evidence already attached to this submission outside the bundle.")
+    else:
+        result["submission_total_bytes_estimate"] = evidence_bytes + submission_used_bytes
+        if result["submission_total_bytes_estimate"] > SUBMISSION_LIMIT:
+            errors.append("Evidence for this submission exceeds the 2 GiB limit")
     result["result"] = "fail" if errors else "incomplete" if warnings else "pass"
     result["exit_code"] = {"pass": 0, "fail": 1, "incomplete": 2}[result["result"]]
     return result
@@ -242,7 +253,13 @@ def main(argv=None):
     check = sub.add_parser("audit", help="Recheck exact files; never upload or modify them")
     check.add_argument("manifest", type=Path)
     check.add_argument("--phase", choices=["scoring", "final"], default="scoring")
-    check.add_argument("--already-used-bytes", type=int)
+    quota = check.add_mutually_exclusive_group()
+    quota.add_argument("--new-submission", dest="submission_used_bytes", action="store_const", const=0,
+                       help="This submission has no previously attached evidence")
+    quota.add_argument("--submission-used-bytes", type=int,
+                       help="Evidence bytes already attached to this submission outside the audited bundle")
+    check.add_argument("--already-used-bytes", type=int,
+                       help="Deprecated team-wide byte count. Ignored under the current rules")
     check.add_argument("--out", type=Path)
     args = parser.parse_args(argv)
     try:
@@ -250,7 +267,8 @@ def main(argv=None):
             manifest = seal(args.capture, args.out)
             print(json.dumps({"result": "sealed", "manifest": str(args.out), "artifacts": len(manifest["artifacts"])}))
             return 0
-        result = audit(args.manifest, args.phase, args.already_used_bytes)
+        result = audit(args.manifest, args.phase, args.already_used_bytes,
+                       submission_used_bytes=args.submission_used_bytes)
         text = json.dumps(result, ensure_ascii=False, indent=2) + "\n"
         if args.out:
             # Exclusive creation also protects accidental evidence/report overwrites.

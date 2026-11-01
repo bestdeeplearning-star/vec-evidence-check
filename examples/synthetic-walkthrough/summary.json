@@ -16,20 +16,27 @@
       "warnings": []
     },
     {
-      "case": "unknown-team-storage",
+      "case": "other-submission-storage",
+      "expected": "pass",
+      "actual": "pass",
+      "errors": [],
+      "warnings": []
+    },
+    {
+      "case": "unknown-submission-storage",
       "expected": "incomplete",
       "actual": "incomplete",
       "errors": [],
       "warnings": [
-        "Team storage already used is unknown. Read it in the official portal; pass --already-used-bytes excluding this new bundle."
+        "Specify --new-submission for a fresh entry, or --submission-used-bytes for evidence already attached to this submission outside the bundle."
       ]
     },
     {
-      "case": "prior-storage-exhausted",
+      "case": "same-submission-exhausted",
       "expected": "fail",
       "actual": "fail",
       "errors": [
-        "Declared prior storage plus this bundle exceeds the conservative team evidence limit"
+        "Evidence for this submission exceeds the 2 GiB limit"
       ],
       "warnings": []
     },
