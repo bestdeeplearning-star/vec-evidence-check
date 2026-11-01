@@ -1,7 +1,7 @@
 {
-  "tool_version": "1.0.0",
+  "tool_version": "1.1.0",
   "phase": "final",
-  "rules_as_of": "2026-09-14",
+  "rules_as_of": "2026-10-31",
   "rules_url": "https://virtualembryo.ai/challenge/rules",
   "errors": [
     "Final nomination missing: harness"
@@ -36,8 +36,8 @@
   "manifest_is_official_upload_format": false,
   "note": "A pass means local packaging checks passed. It is not acceptance, scoring, eligibility or proof of autonomy.",
   "bundle_evidence_bytes": 163,
-  "team_already_used_bytes_declared": 0,
-  "team_total_bytes_estimate": 163,
+  "submission_already_used_bytes_declared": 0,
+  "submission_total_bytes_estimate": 163,
   "result": "fail",
   "exit_code": 1
 }

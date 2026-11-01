@@ -18,9 +18,10 @@ La herramienta crea una relación explícita entre un identificador de ejecució
 
 | Caso | Resultado esperado | Qué demuestra |
 |---|---|---|
-| Paquete completo, almacenamiento previo declarado | `pass` | Las comprobaciones locales de empaquetado terminan correctamente |
-| Almacenamiento previo desconocido | `incomplete` | No se supone que el equipo tiene cero archivos |
-| Almacenamiento previo agotado | `fail` | Un paquete pequeño también puede exceder el límite total |
+| Paquete completo, envío nuevo | `pass` | Las comprobaciones locales de empaquetado terminan correctamente |
+| Otro envío ya tiene evidencia | `pass` | Sus bytes no consumen el cupo del envío nuevo |
+| Uso previo del envío actual desconocido | `incomplete` | Falta comprobar cuántos bytes del envío actual ya están adjuntos |
+| El mismo envío ya agotó sus 2 GiB | `fail` | Incluso un paquete pequeño excede el límite de ese envío |
 | Dos tipos de evidencia, fase de puntuación | `pass` | Se comprueba la fase elegida |
 | Los mismos dos tipos, nominación final | `fail` | Falta el archivo del arnés requerido para la nominación |
 | Evidencia etiquetada con otra ejecución | `fail` | Un identificador mezclado no pasa inadvertido |
@@ -32,7 +33,7 @@ En `changed-prediction/`, el programa cambia un valor de la matriz dentro de HDF
 
 ```bash
 python3 vec_evidence.py audit /tmp/vec-demo-es/changed-prediction/manifest.json \
-  --phase final --already-used-bytes 0
+  --phase final --new-submission
 ```
 
 El código de salida es 1 y el informe indica un cambio de SHA-256. La corrección consiste en recuperar los archivos exactos de la ejecución seleccionada. Si realmente vas a presentar otra ejecución, conserva la anterior y prepara una carpeta y un manifiesto nuevos. Reescribir el manifiesto solo para ocultar un cambio elimina la utilidad de esta comprobación.
@@ -41,9 +42,9 @@ El código de salida es 1 y el informe indica un cambio de SHA-256. La correcci�
 
 ```bash
 python3 vec_evidence.py audit /tmp/vec-demo-es/scoring-only/manifest.json \
-  --phase scoring --already-used-bytes 0
+  --phase scoring --new-submission
 python3 vec_evidence.py audit /tmp/vec-demo-es/scoring-only/manifest.json \
-  --phase final --already-used-bytes 0
+  --phase final --new-submission
 ```
 
 La primera comprobación pasa. La segunda falla porque falta `harness`. El archivo debe proceder de la misma ejecución; el programa no lo escribe por ti. Esta separación evita confundir un paquete que puede entrar en evaluación con uno completo para la nominación final.
@@ -58,9 +59,11 @@ La etiqueta `run_id` es una declaración tuya. El programa detecta contradiccion
 
 Usa los pasos de [README](README.md) con tus archivos reales. Mantén el manifiesto original, comprueba de nuevo después de copiar el paquete a otra máquina y selecciona manualmente cada archivo en el portal. Nunca subas los ejemplos sintéticos de esta carpeta como una participación real.
 
+Para un envío nuevo, usa `--new-submission`. Al añadir evidencia a un envío existente, usa `--submission-used-bytes N` con los bytes ya adjuntos a ese envío que queden fuera del paquete local. El límite es de 200 MiB por archivo de evidencia y 2 GiB por envío. El parámetro antiguo `--already-used-bytes` se refería a todo el equipo y ahora se ignora.
+
 Las reglas consultadas están enlazadas en README. La web puede cambiarlas: el informe muestra la fecha de la política aplicada. La comprobación local no sustituye una confirmación del organizador.
 
-Las 29 pruebas de comportamiento también cubren entradas malformadas, incluidos tipos de evidencia que no son texto y JSON con UTF-8 dañado. Se ejecutan sin las dependencias de AnnData:
+Las pruebas de comportamiento también cubren entradas malformadas, incluidos tipos de evidencia que no son texto y JSON con UTF-8 dañado. Se ejecutan sin las dependencias de AnnData:
 
 ```bash
 python3 -m unittest -v test_vec_evidence.py

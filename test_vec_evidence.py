@@ -36,7 +36,7 @@ class EvidenceTests(unittest.TestCase):
         self.manifest.write_text(json.dumps(doc))
 
     def check(self, phase="final", used=0):
-        return ve.audit(self.manifest, phase, used)
+        return ve.audit(self.manifest, phase, submission_used_bytes=used)
 
     def test_valid_final_bundle(self):
         self.doc["run"]["unrelated_private_config"] = "synthetic-value-not-for-manifest"
@@ -103,23 +103,53 @@ class EvidenceTests(unittest.TestCase):
         self.seal()
         self.assertEqual(self.check(used=None)["result"], "pass")
 
-    def test_unknown_team_storage_is_incomplete(self):
+    def test_append_requires_current_submission_usage(self):
         self.seal()
         result = self.check(used=None)
         self.assertEqual(result["result"], "incomplete")
-        self.assertEqual(result["exit_code"], 2)
-        self.assertIsNone(result["team_total_bytes_estimate"])
+        self.assertIsNone(result["submission_total_bytes_estimate"])
 
-    def test_total_counts_previous_team_evidence(self):
+    def test_legacy_team_bytes_cannot_spend_another_submissions_allowance(self):
         self.seal()
-        result = self.check(used=ve.TEAM_LIMIT)
-        self.assertEqual(result["result"], "fail")
+        prior_team = 3 * 1024**3
+        self.assertEqual(ve.audit(self.manifest, "final", prior_team)["result"], "incomplete")
+        current = ve.audit(self.manifest, "final", prior_team, submission_used_bytes=0)
+        self.assertEqual(current["result"], "pass")
+        self.assertIn("ignored", current["legacy_option_notice"])
+        self.assertEqual(current["submission_total_bytes_estimate"], current["bundle_evidence_bytes"])
 
-    def test_exact_team_limit_and_one_byte_over(self):
+    def test_exact_submission_limit_and_one_byte_over(self):
         self.seal()
         total = self.check()["bundle_evidence_bytes"]
-        self.assertEqual(self.check(used=ve.TEAM_LIMIT-total)["result"], "pass")
-        self.assertEqual(self.check(used=ve.TEAM_LIMIT-total+1)["result"], "fail")
+        self.assertEqual(ve.SUBMISSION_LIMIT, 2_147_483_648)
+        self.assertEqual(self.check(used=2_147_483_648-total)["result"], "pass")
+        self.assertEqual(self.check(used=2_147_483_649-total)["result"], "fail")
+        self.assertEqual(self.check(used=600_000_000)["result"], "pass")
+
+    def test_bundle_alone_over_cap_fails_even_if_current_usage_unknown(self):
+        self.seal()
+        bundle_bytes = self.check()["bundle_evidence_bytes"]
+        with patch.object(ve, "SUBMISSION_LIMIT", bundle_bytes - 1):
+            self.assertEqual(self.check(used=None)["result"], "fail")
+
+    def test_explicit_evidence_unit_is_mib(self):
+        self.assertEqual(ve.EVIDENCE_LIMIT, 209_715_200)
+        self.assertEqual(ve.PREDICTION_LIMIT, 1_200_000_000)
+
+    def test_old_manifest_can_be_audited_without_resealing(self):
+        self.seal()
+        self.alter_manifest(lambda d: d.update(rules_as_of="2026-09-14", tool_version="1.0.0"))
+        before = self.manifest.read_bytes()
+        result = self.check()
+        self.assertEqual(result["result"], "pass")
+        self.assertEqual(result["rules_as_of"], ve.RULES_AS_OF)
+        self.assertEqual(self.manifest.read_bytes(), before)
+
+    def test_invalid_current_submission_usage(self):
+        self.seal()
+        for count in (-1, False, 1.5):
+            with self.subTest(count=count), self.assertRaisesRegex(ve.BundleError, "submission_used_bytes"):
+                self.check(used=count)
 
     def test_file_limit_before_reading_sparse_oversized_file(self):
         with (self.root / "huge.log").open("wb") as stream:
@@ -238,7 +268,10 @@ class EvidenceTests(unittest.TestCase):
     def test_cli_exit_codes_and_machine_readable_report(self):
         self.seal()
         script = str(Path(ve.__file__).resolve())
-        for extra, expected in (([], 2), (["--already-used-bytes", "0"], 0)):
+        cases = [([], 2), (["--new-submission"], 0), (["--already-used-bytes", "600000000"], 2),
+                 (["--already-used-bytes", "600000000", "--new-submission"], 0),
+                 (["--submission-used-bytes", "2147483648"], 1)]
+        for extra, expected in cases:
             completed = subprocess.run([sys.executable, script, "audit", str(self.manifest), *extra], capture_output=True, text=True)
             self.assertEqual(completed.returncode, expected)
             self.assertEqual(json.loads(completed.stdout)["exit_code"], expected)
